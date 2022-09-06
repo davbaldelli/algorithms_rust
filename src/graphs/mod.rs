@@ -1,3 +1,4 @@
+use std::ops::Add;
 use crate::graphs::Cardinal::{EST, NORTH, SOUTH, WEST};
 use crate::graphs::Color::{BLACK, GREY, WHITE};
 use crate::graphs::GraphType::GraphUndirected;
@@ -73,6 +74,7 @@ impl Graph {
     /// # Examples
     ///
     /// let graph = Graph::new(10, GraphUndirected);
+    ///
     pub fn new(n_nodes: usize, g_type: GraphType) -> Graph {
         let mut graph = Graph {
             n_nodes,
@@ -139,7 +141,7 @@ enum Color {
 /// # Arguments
 /// * `graph` - graph where to execute the algorithm
 /// * `source` - source node of the shortest path tree
-
+///
 pub fn dijkstra(
     graph: &Graph,
     source: usize,
@@ -193,6 +195,7 @@ pub fn dijkstra(
 /// # Arguments
 /// * `graph` - graph where to execute the algorithm
 /// * `source` - source node of the shortest path tree
+///
 pub fn bfs(graph: &Graph, source: usize) -> (Vec<Option<usize>>, Vec<i32>, Vec<Option<&Edge>>) {
     let mut colors: Vec<Color> = Vec::new();
     let mut distances: Vec<i32> = Vec::new();
@@ -227,6 +230,47 @@ pub fn bfs(graph: &Graph, source: usize) -> (Vec<Option<usize>>, Vec<i32>, Vec<O
     }
 
     return (predecessors, distances, prev_edge);
+}
+
+pub fn dfs(graph : &Graph) -> (Vec<Option<usize>>, Vec<usize>, Vec<usize>){
+    let mut discover: Vec<usize> = Vec::new();
+    let mut finish: Vec<usize> = Vec::new();
+    let mut color: Vec<Color> = Vec::new();
+    let mut prev: Vec<Option<usize>> = Vec::new();
+    let mut time = 0;
+
+    for _ in 0..graph.n_nodes() {
+        color.push(WHITE);
+        prev.push(None);
+        discover.push(0);
+        finish.push(0);
+    }
+
+    for i in 0..graph.n_nodes() {
+        if color[i] == WHITE {
+            dfs_visit(graph, i, &mut discover, &mut finish, &mut color, &mut prev, &mut time);
+        }
+    }
+
+    (prev, discover, finish)
+}
+
+fn dfs_visit(graph : &Graph, src : usize, discover: &mut Vec<usize>, finish: &mut Vec<usize>, color: &mut Vec<Color>, prev: &mut Vec<Option<usize>>, time: &mut usize){
+    *time += 1;
+    discover[src] = *time;
+    color[src] = GREY;
+
+    for edge in graph.edges[src].as_slice() {
+        let dst = edge.dst;
+        if color[dst] == WHITE {
+            prev[dst] = Some(src);
+            dfs_visit(graph, dst, discover, finish, color, prev, time);
+        }
+    }
+
+    color[src] = BLACK;
+    *time += 1;
+    finish[src] = *time;
 }
 
 pub fn print_bfs(src: usize, dst: usize, pred: Vec<Option<usize>>, dist: Vec<i32>) {

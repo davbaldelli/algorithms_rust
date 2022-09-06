@@ -1,5 +1,6 @@
 use std::fs;
 use std::io::{BufRead, BufReader, Error};
+use std::time::Instant;
 
 use crate::graphs::{Edge, Graph};
 use crate::graphs::GraphType::GraphUndirected;
@@ -62,7 +63,6 @@ pub fn graph_from_file(path: String, cell_size: (usize, usize)) -> Result<Graph,
         (rows - (cell_size.0 - 1)) * (cols - (cell_size.1 - 1)),
         GraphUndirected,
     );
-
     for i in 0..(rows - (cell_size.0 - 1)) {
         for j in 0..(cols - (cell_size.1 - 1)) {
             if is_a_node(&grid, i, j, '*', cell_size) {
@@ -87,12 +87,11 @@ pub fn graph_from_file(path: String, cell_size: (usize, usize)) -> Result<Graph,
 
 fn read_grid_from_file(path: String) -> Result<(Vec<Vec<char>>, usize, usize), Error> {
     let buff_reader = BufReader::new(fs::File::open(path)?);
-    let lines = buff_reader.lines();
     let mut i: i32 = -1;
     let mut x: usize = 0;
     let mut y: usize = 0;
     let mut grid: Vec<Vec<char>> = Vec::new();
-    for line in lines {
+    for line in buff_reader.lines() {
         if i == -1 {
             let size = read_first_line(line)?;
             x = size.unwrap().0;
@@ -148,24 +147,23 @@ fn read_grid_file_line(
     columns: usize,
 ) -> Result<Option<Vec<char>>, Error> {
     let mut vector = Vec::new();
-    for j in 0..columns {
-        let val = match line {
-            Ok(line) => line.chars().nth(j),
-            Err(_) => {
+    match line {
+        Ok(line) => {
+            for val in line.chars(){
+                vector.push(val);
+            }
+            if vector.len() != columns {
                 return Err(Error::new(
                     std::io::ErrorKind::InvalidInput,
-                    "Error reading the line",
+                    "The line contains a wrong number of columns",
                 ));
             }
-        };
-        match val {
-            Some(val) => vector.push(val),
-            None => {
-                return Err(Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "Missing some columns",
-                ));
-            }
+        },
+        Err(_) => {
+            return Err(Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Error reading the line",
+            ));
         }
     }
     Ok(Some(vector))
