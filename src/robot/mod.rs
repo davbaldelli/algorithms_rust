@@ -70,14 +70,14 @@ pub fn graph_from_file(path: String, cell_size: (usize, usize)) -> Result<Graph,
                     && !has_obstacles_on_right(&grid, i, j, '*', cell_size)
                 {
                     let vertices = get_src_dst(i, j, cols, cell_size, false);
-                    graph.add_edge(vertices.0, vertices.1, 1, false);
+                    graph.add_edge(vertices.0, vertices.1, 1.0, false);
                 }
 
                 if !is_last_row(i, rows, cell_size)
                     && !has_obstacles_below(&grid, i, j, '*', cell_size)
                 {
                     let vertices = get_src_dst(i, j, cols, cell_size, true);
-                    graph.add_edge(vertices.0, vertices.1, 1, true);
+                    graph.add_edge(vertices.0, vertices.1, 1.0, true);
                 }
             }
         }
@@ -94,8 +94,8 @@ fn read_grid_from_file(path: String) -> Result<(Vec<Vec<char>>, usize, usize), E
     for line in buff_reader.lines() {
         if i == -1 {
             let size = read_first_line(line)?;
-            x = size.unwrap().0;
-            y = size.unwrap().1;
+            x = size.0;
+            y = size.1;
         } else {
             match read_grid_file_line(&line, y)? {
                 Some(vec) => grid.push(vec),
@@ -119,10 +119,10 @@ fn read_grid_from_file(path: String) -> Result<(Vec<Vec<char>>, usize, usize), E
     Ok((grid, x, y))
 }
 
-fn read_first_line(line: Result<String, Error>) -> Result<Option<(usize, usize)>, Error> {
-    let parsed: Option<(usize, usize)> = match line {
+fn read_first_line(line: Result<String, Error>) -> Result<(usize, usize), Error> {
+    let parsed: (usize, usize) = match line {
         Ok(line) => match sscanf::scanf!(line, "{} {}", usize, usize) {
-            Ok(parsed) => Some(parsed),
+            Ok(parsed) => parsed,
             //This error occurs when the first line is wrongly formatted
             Err(_) => {
                 return Err(Error::new(

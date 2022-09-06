@@ -1,14 +1,15 @@
-use std::ops::Add;
+use std::fs;
+use std::io::{BufRead, BufReader, Error};
 use crate::graphs::Cardinal::{EST, NORTH, SOUTH, WEST};
 use crate::graphs::Color::{BLACK, GREY, WHITE};
-use crate::graphs::GraphType::GraphUndirected;
+use crate::graphs::GraphType::{GraphDirected, GraphUndirected};
 use crate::MinHeap;
 use queues::{IsQueue, Queue};
 
 pub struct Edge {
     src: usize,
     dst: usize,
-    weight: usize,
+    weight: f32,
     pub direction: Cardinal,
 }
 
@@ -54,7 +55,7 @@ pub struct Graph {
 }
 
 impl Edge {
-    pub fn new(src: usize, dst: usize, weight: usize, direction: Cardinal) -> Edge {
+    pub fn new(src: usize, dst: usize, weight: f32, direction: Cardinal) -> Edge {
         Edge {
             src,
             dst,
@@ -96,7 +97,7 @@ impl Graph {
         self.n_nodes
     }
 
-    fn insert_edge(&mut self, src: usize, dst: usize, weight: usize, direction: Cardinal) {
+    fn insert_edge(&mut self, src: usize, dst: usize, weight: f32, direction: Cardinal) {
         self.edges[src].push(Edge::new(src, dst, weight, direction));
         self.in_deg[dst] += 1;
         self.out_deg[src] += 1;
@@ -111,7 +112,7 @@ impl Graph {
     /// * `weight` - weight of the edge
     /// * `vertical` - (when the graph is a grid) if is a vertical edge or not
     ///
-    pub fn add_edge(&mut self, src: usize, dst: usize, weight: usize, vertical: bool) {
+    pub fn add_edge(&mut self, src: usize, dst: usize, weight: f32, vertical: bool) {
         let mut direction = if vertical { SOUTH } else { EST };
         self.insert_edge(src, dst, weight, direction);
         if self.g_type == GraphUndirected {
@@ -119,6 +120,17 @@ impl Graph {
             self.insert_edge(dst, src, weight, direction);
         }
         self.n_edges += 1;
+    }
+
+    pub fn print(&self){
+        println!("{}", if self.g_type == GraphDirected {String::from("DIRECTED")} else {String::from("UNDIRECTED")});
+        for i in 0..self.edges.len() {
+            print!("[ {}]", i);
+            for edge in self.edges[i].as_slice() {
+                print!(" -> ({}, {}, {})", edge.src, edge.dst, edge.weight);
+            }
+            println!();
+        }
     }
 }
 
@@ -142,11 +154,8 @@ enum Color {
 /// * `graph` - graph where to execute the algorithm
 /// * `source` - source node of the shortest path tree
 ///
-pub fn dijkstra(
-    graph: &Graph,
-    source: usize,
-) -> (Vec<Option<usize>>, Vec<usize>, Vec<Option<&Edge>>) {
-    let mut distances: Vec<usize> = Vec::new();
+pub fn dijkstra(graph: &Graph, source: usize, ) -> (Vec<Option<usize>>, Vec<f32>, Vec<Option<&Edge>>) {
+    let mut distances: Vec<f32> = Vec::new();
     let mut predecessors: Vec<Option<usize>> = Vec::new();
     let mut heap = MinHeap::new();
     let mut added = Vec::new();
@@ -154,9 +163,9 @@ pub fn dijkstra(
 
     for i in 0..graph.n_nodes {
         distances.push(if i == source {
-            0
+            0.0
         } else {
-            usize::MAX - (1000 * 1000)
+            f32::MAX - (1000.0 * 1000.0)
         });
         predecessors.push(None);
         added.push(false);
@@ -197,6 +206,7 @@ pub fn dijkstra(
 /// * `source` - source node of the shortest path tree
 ///
 pub fn bfs(graph: &Graph, source: usize) -> (Vec<Option<usize>>, Vec<i32>, Vec<Option<&Edge>>) {
+
     let mut colors: Vec<Color> = Vec::new();
     let mut distances: Vec<i32> = Vec::new();
     let mut predecessors: Vec<Option<usize>> = Vec::new();
@@ -273,6 +283,22 @@ fn dfs_visit(graph : &Graph, src : usize, discover: &mut Vec<usize>, finish: &mu
     finish[src] = *time;
 }
 
+pub fn print_dfs(prev : &Vec<Option<usize>>, discover : &Vec<usize>, finish : &Vec<usize>){
+    println!(" elem | prev | discover | finish |");
+    println!("------+------+----------+--------+");
+    for i in 0..prev.len() {
+        match prev[i] {
+            Some(prev) => {
+                println!("  {}  |  {}  |    {}    |   {}   |", i, prev, discover[i], finish[i])
+            },
+            None => {
+                println!("  {}  |  {}  |    {}    |   {}   |", i, String::from("none"), discover[i], finish[i])
+            }
+        }
+
+    }
+}
+
 pub fn print_bfs(src: usize, dst: usize, pred: Vec<Option<usize>>, dist: Vec<i32>) {
     println!("  src | dest | distance | path");
     println!("------+------+----------+-------------------------");
@@ -293,4 +319,67 @@ pub fn print_path(src: usize, dst: usize, pred: Vec<Option<usize>>) {
             None => println!("-1"),
         }
     }
+}
+
+pub fn from_file(path : String) -> Result<Graph, Error>{
+    let buff_reader = BufReader::new(fs::File::open(path)?);
+    let mut first = true;
+    let mut n_edges : usize = 0;
+    let mut graph = Graph::new(0, GraphDirected);
+    for line in buff_reader.lines() {
+        if first {
+            let graph_data : (usize, usize, usize) = match line {
+                Ok(line) => match sscanf::scanf!(line, "{} {} {}", usize, usize, usize) {
+                    Ok(parsed) => parsed,
+                    //This error occurs when the first line is wrongly formatted
+                    Err(_) => {
+                        return Err(Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            "First line wrongly formatted",
+                        ));
+                    }
+                },
+                //I don't really now when this can happen
+                Err(e)  => {
+                    return Err(Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        e.to_string(),
+                    ));
+                }
+            };
+            n_edges = graph_data.1;
+            let graph_type = if graph_data.2 == 1 {GraphDirected} else {GraphUndirected};
+            graph = Graph::new(graph_data.0, graph_type);
+            first = false;
+        } else {
+            let edge_data : (usize, usize, f32) = match line {
+                Ok(line) => match sscanf::scanf!(line, "{} {} {}", usize, usize, f32) {
+                    Ok(parsed) => parsed,
+                    Err(e) => {
+                        return Err(Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            format!("Line not formatted properly : {}", e),
+                        ));
+                    }
+                },
+                //I don't really now when this can happen
+                Err(e)  => {
+                    return Err(Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        e.to_string(),
+                    ));
+                }
+            };
+            graph.add_edge(edge_data.0, edge_data.1, edge_data.2, false)
+
+        }
+    }
+
+    if graph.n_edges != n_edges {
+        return Err(Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Lines prompted not matching grid size",
+        ));
+    }
+    Ok(graph)
 }

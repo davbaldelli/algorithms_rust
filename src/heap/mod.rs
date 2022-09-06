@@ -1,6 +1,6 @@
 pub struct HeapElem {
     key: usize,
-    pub prio: usize,
+    pub prio: f32,
 }
 
 pub struct MinHeap {
@@ -28,7 +28,7 @@ impl MinHeap {
         };
     }
 
-    pub fn insert(&mut self, key: usize, prio: usize) {
+    pub fn insert(&mut self, key: usize, prio: f32) {
         self.heap.push(HeapElem { key, prio });
         self.positions.push((self.count() - 1) as i32);
         self.move_up(self.count() - 1);
@@ -44,7 +44,7 @@ impl MinHeap {
         result
     }
 
-    pub fn change_prio(&mut self, key: usize, new_prio: usize) {
+    pub fn change_prio(&mut self, key: usize, new_prio: f32) {
         let j = self.positions[key] as usize;
         let old_prio = self.heap[j].prio;
         self.heap[j].prio = new_prio;
