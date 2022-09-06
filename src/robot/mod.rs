@@ -54,7 +54,7 @@ fn robot_print_path(
     }
 }
 
-pub fn graph_from_file(path: String, cell_size: (usize, usize)) -> Result<Graph, Error> {
+pub fn robot_graph_from_file(path: String, cell_size: (usize, usize)) -> Result<Graph, Error> {
     let result = read_grid_from_file(path)?;
     let grid = result.0;
     let rows = result.1;
@@ -97,16 +97,7 @@ fn read_grid_from_file(path: String) -> Result<(Vec<Vec<char>>, usize, usize), E
             x = size.0;
             y = size.1;
         } else {
-            match read_grid_file_line(&line, y)? {
-                Some(vec) => grid.push(vec),
-                //This error occurs when a line is not properly formatted
-                None => {
-                    return Err(Error::new(
-                        std::io::ErrorKind::InvalidInput,
-                        "Incorrect line format",
-                    ));
-                }
-            }
+            grid.push(read_grid_file_line(&line, y)?)
         }
         i += 1;
     }
@@ -121,16 +112,7 @@ fn read_grid_from_file(path: String) -> Result<(Vec<Vec<char>>, usize, usize), E
 
 fn read_first_line(line: Result<String, Error>) -> Result<(usize, usize), Error> {
     let parsed: (usize, usize) = match line {
-        Ok(line) => match sscanf::scanf!(line, "{} {}", usize, usize) {
-            Ok(parsed) => parsed,
-            //This error occurs when the first line is wrongly formatted
-            Err(_) => {
-                return Err(Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "First line wrongly formatted",
-                ));
-            }
-        },
+        Ok(line) => sscanf::scanf!(line, "{} {}", usize, usize).expect("First line wrongly formatted"),
         //This error occurs when there is any first line
         Err(_) => {
             return Err(Error::new(
@@ -145,7 +127,7 @@ fn read_first_line(line: Result<String, Error>) -> Result<(usize, usize), Error>
 fn read_grid_file_line(
     line: &Result<String, Error>,
     columns: usize,
-) -> Result<Option<Vec<char>>, Error> {
+) -> Result<Vec<char>, Error> {
     let mut vector = Vec::new();
     match line {
         Ok(line) => {
@@ -166,7 +148,7 @@ fn read_grid_file_line(
             ));
         }
     }
-    Ok(Some(vector))
+    Ok(vector)
 }
 
 fn get_src_dst(

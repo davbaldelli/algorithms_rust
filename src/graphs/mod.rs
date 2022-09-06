@@ -329,16 +329,7 @@ pub fn from_file(path : String) -> Result<Graph, Error>{
     for line in buff_reader.lines() {
         if first {
             let graph_data : (usize, usize, usize) = match line {
-                Ok(line) => match sscanf::scanf!(line, "{} {} {}", usize, usize, usize) {
-                    Ok(parsed) => parsed,
-                    //This error occurs when the first line is wrongly formatted
-                    Err(_) => {
-                        return Err(Error::new(
-                            std::io::ErrorKind::InvalidInput,
-                            "First line wrongly formatted",
-                        ));
-                    }
-                },
+                Ok(line) => sscanf::scanf!(line, "{} {} {}", usize, usize, usize).expect("First line wrongly formatted"),
                 //I don't really now when this can happen
                 Err(e)  => {
                     return Err(Error::new(
@@ -353,15 +344,7 @@ pub fn from_file(path : String) -> Result<Graph, Error>{
             first = false;
         } else {
             let edge_data : (usize, usize, f32) = match line {
-                Ok(line) => match sscanf::scanf!(line, "{} {} {}", usize, usize, f32) {
-                    Ok(parsed) => parsed,
-                    Err(e) => {
-                        return Err(Error::new(
-                            std::io::ErrorKind::InvalidInput,
-                            format!("Line not formatted properly : {}", e),
-                        ));
-                    }
-                },
+                Ok(line) => sscanf::scanf!(line, "{} {} {}", usize, usize, f32).expect("Line not formatted properly"),
                 //I don't really now when this can happen
                 Err(e)  => {
                     return Err(Error::new(
@@ -371,7 +354,6 @@ pub fn from_file(path : String) -> Result<Graph, Error>{
                 }
             };
             graph.add_edge(edge_data.0, edge_data.1, edge_data.2, false)
-
         }
     }
 
