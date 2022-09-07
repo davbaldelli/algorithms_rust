@@ -59,18 +59,26 @@ pub fn robot_graph_from_file(path: String, cell_size: (usize, usize)) -> Result<
     let grid = result.0;
     let rows = result.1;
     let cols = result.2;
+    let mut are_nodes : Vec<bool> = Vec::new();
     let mut graph = Graph::new(
         (rows - (cell_size.0 - 1)) * (cols - (cell_size.1 - 1)),
         GraphUndirected,
     );
+    for i in 0..graph.n_nodes() {
+        are_nodes.push(false)
+    }
+    are_nodes[0] = is_a_node(&grid, 0, 0, '*', cell_size);
+
     for i in 0..(rows - (cell_size.0 - 1)) {
         for j in 0..(cols - (cell_size.1 - 1)) {
-            if is_a_node(&grid, i, j, '*', cell_size) {
+            let src = get_src_dst(i, j, cols, cell_size, false).0;
+            if are_nodes[src] {
                 if !is_last_col(j, cols, cell_size)
                     && !has_obstacles_on_right(&grid, i, j, '*', cell_size)
                 {
                     let vertices = get_src_dst(i, j, cols, cell_size, false);
                     graph.add_edge(vertices.0, vertices.1, 1.0, false);
+                    are_nodes[vertices.1] = true;
                 }
 
                 if !is_last_row(i, rows, cell_size)
@@ -78,6 +86,7 @@ pub fn robot_graph_from_file(path: String, cell_size: (usize, usize)) -> Result<
                 {
                     let vertices = get_src_dst(i, j, cols, cell_size, true);
                     graph.add_edge(vertices.0, vertices.1, 1.0, true);
+                    are_nodes[vertices.1] = true;
                 }
             }
         }

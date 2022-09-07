@@ -1,7 +1,9 @@
-use crate::graphs::{bfs, dijkstra};
+use crate::graphs::{bfs, dfs, dijkstra, from_file, print_dfs};
 use crate::heap::MinHeap;
-use crate::robot::{robot_print_bfs, robot_print_dijkstra};
+use crate::robot::{robot_graph_from_file, robot_print_bfs, robot_print_dijkstra};
 use std::time::Instant;
+use std::io::Write;
+use std::str::FromStr;
 
 mod graphs;
 mod heap;
@@ -42,8 +44,8 @@ fn test_heap() {
 #[test]
 fn test_shortest_path() {
     let cell_size: (usize, usize) = (3, 3);
-    let graph = match robot::graph_from_file(
-        String::from("/home/davide/Documenti/rust/algorithm/algorithms/src/test4.in"),
+    let graph = match robot_graph_from_file(
+        String::from("/home/davide/Documenti/rust/algorithm/algorithms/src/test1.in"),
         cell_size,
     ) {
         Ok(graph) => graph,
@@ -51,39 +53,50 @@ fn test_shortest_path() {
     };
     let mut now = Instant::now();
     println!("Dijkstra started...");
-    let _ = dijkstra(&graph, 0);
+    //let _ = dijkstra(&graph, 0);
     println!("Dijkstra elapsed time => {} ms", now.elapsed().as_millis());
     now = Instant::now();
     println!("BFS started...");
-    let _ = bfs(&graph, 0);
+    let result_bfs = bfs(&graph, 0);
     println!("BFS elapsed time => {} ms", now.elapsed().as_millis());
+    robot_print_bfs(0, graph.n_nodes() - 1, result_bfs.0, result_bfs.1, &result_bfs.2);
 }
 
 #[test]
 fn test_read_graph(){
-    let graph = match graphs::from_file(String::from("/home/davide/Documenti/rust/algorithm/algorithms/src/graph10.in")){
-        Ok(graph) => graph,
-        Err(e) => panic!("{}", e.to_string()),
-    };
+    let graph = graphs::from_file(
+        String::from("/home/davide/Documenti/rust/algorithm/algorithms/src/graph10.in"))
+        .expect("Error converting the file to graph");
     graph.print();
 }
 
 fn main() {
-    let cell_size: (usize, usize) = (3, 3);
-    let graph = match robot::graph_from_file(
-        String::from("/home/davide/Documenti/rust/algorithm/algorithms/src/test4.in"),
-        cell_size,
-    ) {
-        Ok(graph) => graph,
-        Err(e) => panic!("{}", e.to_string()),
-    };
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() != 4 {
+        writeln!(
+            std::io::stderr(),
+            "Usage: algorithms FILE CELL_ROWS CELL_COLS"
+        ).unwrap();
+        writeln!(
+            std::io::stderr(),
+            "Example {} test.in 3 3",
+            args[0]
+        ).unwrap();
+        std::process::exit(1);
+    }
+
+    let x =  usize::from_str(&args[2]).expect("Error parsing cell dimension");
+    let y =  usize::from_str(&args[3]).expect("Error parsing cell dimension");
+
+    let cell_size = (x, y);
+    let graph =  robot_graph_from_file(String::from(&args[1]), cell_size).expect("Error converting file to graph");
     let mut now = Instant::now();
     println!("Dijkstra started...");
     let _ = dijkstra(&graph, 0);
     println!("Dijkstra elapsed time => {} ms", now.elapsed().as_millis());
     now = Instant::now();
     println!("BFS started...");
-    let _ = bfs(&graph, 0);
+    let result_bfs = bfs(&graph, 0);
     println!("BFS elapsed time => {} ms", now.elapsed().as_millis());
-    //robot_print_bfs(0, graph.n_nodes - 1, result_bfs.0, result_bfs.1, &result_bfs.2);
+    robot_print_bfs(0, graph.n_nodes() - 1, result_bfs.0, result_bfs.1, &result_bfs.2);
 }
