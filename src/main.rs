@@ -1,6 +1,6 @@
 use crate::graphs::{bfs, dfs, dijkstra, from_file, print_dfs};
 use crate::heap::MinHeap;
-use crate::robot::{robot_graph_from_file, robot_print_bfs, robot_print_dijkstra};
+use crate::robot::{robot_graph_from_file, robot_graph_from_file2, robot_print_bfs, robot_print_dijkstra};
 use std::time::Instant;
 use std::io::Write;
 use std::str::FromStr;
@@ -89,8 +89,15 @@ fn main() {
     let y =  usize::from_str(&args[3]).expect("Error parsing cell dimension");
 
     let cell_size = (x, y);
-    let graph =  robot_graph_from_file(String::from(&args[1]), cell_size).expect("Error converting file to graph");
     let mut now = Instant::now();
+    println!("Type 1 of conversion started...");
+    let _ =  robot_graph_from_file(String::from(&args[1]), cell_size).expect("Error converting file to graph");
+    println!("First conversion => {} ms", now.elapsed().as_millis());
+    now = Instant::now();
+    println!("Type 2 of conversion started...");
+    let graph =  robot_graph_from_file2(String::from(&args[1]), cell_size).expect("Error converting file to graph");
+    println!("Second conversion => {} ms", now.elapsed().as_millis());
+    now = Instant::now();
     println!("Dijkstra started...");
     let _ = dijkstra(&graph, 0);
     println!("Dijkstra elapsed time => {} ms", now.elapsed().as_millis());

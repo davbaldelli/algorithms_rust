@@ -94,6 +94,51 @@ pub fn robot_graph_from_file(path: String, cell_size: (usize, usize)) -> Result<
     Ok(graph)
 }
 
+pub fn robot_graph_from_file2(path: String, cell_size: (usize, usize)) -> Result<Graph, Error> {
+    let result = read_grid_from_file(path)?;
+    let grid = result.0;
+    let rows = result.1;
+    let cols = result.2;
+    let mut cell_is_node: Vec<Option<bool>> = Vec::new();
+    let mut graph = Graph::new(
+        (rows - (cell_size.0 - 1)) * (cols - (cell_size.1 - 1)),
+        GraphUndirected,
+    );
+    for _ in 0..graph.n_nodes() {
+        cell_is_node.push(None);
+    }
+    cell_is_node[0] = Some(is_a_node(&grid, 0, 0, '*', cell_size));
+    for i in 0..(rows - (cell_size.0 - 1)) {
+        for j in 0..(cols - (cell_size.1 - 1)) {
+            let src = get_src_dst(i, j, cols, cell_size, false).0;
+            if cell_is_node[src].is_none() {
+                cell_is_node[src] = Some(is_a_node(&grid, i, j, '*', cell_size));
+            }
+            if cell_is_node[src].unwrap() {
+                if !is_last_col(j, cols, cell_size) {
+                    let vertices = get_src_dst(i, j, cols, cell_size, false);
+                    if !has_obstacles_on_right(&grid, i, j, '*', cell_size) {
+                        graph.add_edge(vertices.0, vertices.1, 1.0, false);
+                        cell_is_node[vertices.1] = Some(true);
+                    } else {
+                        cell_is_node[vertices.1] = Some(false);
+                    }
+                }
+                if !is_last_row(i, rows, cell_size) {
+                    let vertices = get_src_dst(i, j, cols, cell_size, true);
+                    if !has_obstacles_below(&grid, i, j, '*', cell_size) {
+                        graph.add_edge(vertices.0, vertices.1, 1.0, true);
+                        cell_is_node[vertices.1] = Some(true);
+                    } else {
+                        cell_is_node[vertices.1] = Some(false);
+                    }
+                }
+            }
+        }
+    }
+    Ok(graph)
+}
+
 fn read_grid_from_file(path: String) -> Result<(Vec<Vec<char>>, usize, usize), Error> {
     let buff_reader = BufReader::new(fs::File::open(path)?);
     let mut i: i32 = -1;
