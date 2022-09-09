@@ -1,20 +1,55 @@
 use std::fs;
 use std::io::{BufRead, BufReader, Error};
 use std::time::Instant;
+use crate::Edge;
 
-use crate::graphs::{Edge, Graph};
+use crate::graphs::{NormalEdge, Graph};
 use crate::graphs::GraphType::GraphUndirected;
+
+pub struct RobotEdge{
+    src: usize,
+    dst: usize,
+    weight: f32,
+    direction : char
+}
+
+impl Edge for RobotEdge{
+    fn new(src: usize, dst: usize, weight: f32) -> Self {
+        RobotEdge{src, dst, weight, direction : 'N'}
+    }
+
+    fn source(&self) -> usize {
+        self.src
+    }
+
+    fn destination(&self) -> usize {
+        self.dst
+    }
+
+    fn weight(&self) -> f32 {
+        self.weight
+    }
+}
+
+impl RobotEdge {
+    pub fn direction(&self) -> char{
+        self.direction
+    }
+
+    pub fn set_direction(&mut self, dir : char){
+        self.direction = dir;
+    }
+}
 
 pub fn robot_print_bfs(
     src: usize,
     dst: usize,
-    pred: Vec<Option<usize>>,
     dist: Vec<i32>,
-    prev_edge: &Vec<Option<&Edge>>,
+    prev_edge: &Vec<Option<&RobotEdge>>,
 ) {
     if dist[dst] > 0 {
         println!("{}", dist[dst]);
-        robot_print_path(src, dst, pred, prev_edge);
+        robot_print_path(src, dst, prev_edge);
         println!();
     } else {
         println!("{}", -1);
@@ -24,13 +59,12 @@ pub fn robot_print_bfs(
 pub fn robot_print_dijkstra(
     src: usize,
     dst: usize,
-    pred: Vec<Option<usize>>,
+    prev_edge: &Vec<Option<&RobotEdge>>,
     dist: Vec<usize>,
-    prev_edge: &Vec<Option<&Edge>>,
 ) {
     if dist[dst] != (usize::MAX - (1000 * 1000)) {
         println!("{}", dist[dst]);
-        robot_print_path(src, dst, pred, prev_edge);
+        robot_print_path(src, dst, prev_edge);
         println!();
     } else {
         println!("{}", -1);
@@ -40,73 +74,33 @@ pub fn robot_print_dijkstra(
 fn robot_print_path(
     src: usize,
     dst: usize,
-    pred: Vec<Option<usize>>,
-    prev_edge: &Vec<Option<&Edge>>,
+    prev_edge: &Vec<Option<&RobotEdge>>,
 ) {
     if src != dst {
-        match pred[dst] {
-            Some(prev_dst) => {
-                robot_print_path(src, prev_dst, pred, prev_edge);
-                print!("{}", prev_edge[dst].unwrap().direction.value());
+        match prev_edge[dst] {
+            Some(edge) => {
+                robot_print_path(src, edge.source(), prev_edge);
+                match prev_edge[dst] {
+                    Some(edge) => {
+                        print!("{}", edge.direction());
+                    },
+                    None =>()
+                }
+
             }
             None => println!("-1"),
         }
     }
 }
 
-pub fn robot_graph_from_file(path: String, cell_size: (usize, usize)) -> Result<Graph, Error> {
-    let result = read_grid_from_file(path)?;
-    let grid = result.0;
-    let rows = result.1;
-    let cols = result.2;
-    let mut are_nodes : Vec<bool> = Vec::new();
-    let mut graph = Graph::new(
+pub fn robot_graph_from_file(path: String, cell_size: (usize, usize)) -> Result<Graph<RobotEdge>, Error> {
+    let (grid, rows, cols) = read_grid_from_file(path)?;
+    let mut graph: Graph<RobotEdge> = Graph::new(
         (rows - (cell_size.0 - 1)) * (cols - (cell_size.1 - 1)),
         GraphUndirected,
     );
-    for i in 0..graph.n_nodes() {
-        are_nodes.push(false)
-    }
-    are_nodes[0] = is_a_node(&grid, 0, 0, '*', cell_size);
+    let mut cell_is_node: Vec<Option<bool>> = vec![None; graph.n_nodes()];
 
-    for i in 0..(rows - (cell_size.0 - 1)) {
-        for j in 0..(cols - (cell_size.1 - 1)) {
-            let src = get_src_dst(i, j, cols, cell_size, false).0;
-            if are_nodes[src] {
-                if !is_last_col(j, cols, cell_size)
-                    && !has_obstacles_on_right(&grid, i, j, '*', cell_size)
-                {
-                    let vertices = get_src_dst(i, j, cols, cell_size, false);
-                    graph.add_edge(vertices.0, vertices.1, 1.0, false);
-                    are_nodes[vertices.1] = true;
-                }
-
-                if !is_last_row(i, rows, cell_size)
-                    && !has_obstacles_below(&grid, i, j, '*', cell_size)
-                {
-                    let vertices = get_src_dst(i, j, cols, cell_size, true);
-                    graph.add_edge(vertices.0, vertices.1, 1.0, true);
-                    are_nodes[vertices.1] = true;
-                }
-            }
-        }
-    }
-    Ok(graph)
-}
-
-pub fn robot_graph_from_file2(path: String, cell_size: (usize, usize)) -> Result<Graph, Error> {
-    let result = read_grid_from_file(path)?;
-    let grid = result.0;
-    let rows = result.1;
-    let cols = result.2;
-    let mut cell_is_node: Vec<Option<bool>> = Vec::new();
-    let mut graph = Graph::new(
-        (rows - (cell_size.0 - 1)) * (cols - (cell_size.1 - 1)),
-        GraphUndirected,
-    );
-    for _ in 0..graph.n_nodes() {
-        cell_is_node.push(None);
-    }
     cell_is_node[0] = Some(is_a_node(&grid, 0, 0, '*', cell_size));
     for i in 0..(rows - (cell_size.0 - 1)) {
         for j in 0..(cols - (cell_size.1 - 1)) {
@@ -116,21 +110,30 @@ pub fn robot_graph_from_file2(path: String, cell_size: (usize, usize)) -> Result
             }
             if cell_is_node[src].unwrap() {
                 if !is_last_col(j, cols, cell_size) {
-                    let vertices = get_src_dst(i, j, cols, cell_size, false);
+                    let (src, dst) = get_src_dst(i, j, cols, cell_size, false);
                     if !has_obstacles_on_right(&grid, i, j, '*', cell_size) {
-                        graph.add_edge(vertices.0, vertices.1, 1.0, false);
-                        cell_is_node[vertices.1] = Some(true);
+                        graph.add_edge(src, dst, 1.0);
+                        let src_len = graph.edges[src].len();
+                        graph.edges[src][src_len-1].set_direction('E');
+                        let dst_len = graph.edges[dst].len();
+                        graph.edges[dst][dst_len-1].set_direction('W');
+                        cell_is_node[dst] = Some(true);
                     } else {
-                        cell_is_node[vertices.1] = Some(false);
+                        cell_is_node[dst] = Some(false);
                     }
                 }
                 if !is_last_row(i, rows, cell_size) {
-                    let vertices = get_src_dst(i, j, cols, cell_size, true);
+                    let (src, dst) = get_src_dst(i, j, cols, cell_size, true);
                     if !has_obstacles_below(&grid, i, j, '*', cell_size) {
-                        graph.add_edge(vertices.0, vertices.1, 1.0, true);
-                        cell_is_node[vertices.1] = Some(true);
+                        graph.add_edge(src, dst, 1.0);
+                        let src_len = graph.edges[src].len();
+                        graph.edges[src][src_len-1].set_direction('S');
+                        let dst_len = graph.edges[dst].len();
+                        graph.edges[dst][dst_len-1].set_direction('N');
+                        cell_is_node[dst] = Some(true);
+                        cell_is_node[dst] = Some(true);
                     } else {
-                        cell_is_node[vertices.1] = Some(false);
+                        cell_is_node[dst] = Some(false);
                     }
                 }
             }
@@ -178,10 +181,7 @@ fn read_first_line(line: Result<String, Error>) -> Result<(usize, usize), Error>
     Ok(parsed)
 }
 
-fn read_grid_file_line(
-    line: &Result<String, Error>,
-    columns: usize,
-) -> Result<Vec<char>, Error> {
+fn read_grid_file_line(line: &Result<String, Error>, columns: usize, ) -> Result<Vec<char>, Error> {
     let mut vector = Vec::new();
     match line {
         Ok(line) => {
