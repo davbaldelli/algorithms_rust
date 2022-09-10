@@ -1,13 +1,9 @@
 extern crate termion;
-use std::io;
-use std::io::{stdout, Write};
-use std::str::FromStr;
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 use rand::Rng;
 use termion::{color, style};
 use crate::binary_trees::BinaryTree;
-use crate::graphs::{Edge, from_file, print_all_pairs_sp, Printable};
+use crate::graphs::{Edge, from_file, Printable};
 use crate::heap::MinHeap;
 use crate::robot::{robot_graph_from_file, robot_print_bfs};
 
@@ -59,7 +55,7 @@ fn test_approx_vertex_cover() {
 
 #[test]
 fn test_binary_tree() {
-    let mut array = vec![2, 3, -1, 7, 6, 9, 5];
+    let array = vec![2, 3, -1, 7, 6, 9, 5];
     let mut bt = BinaryTree::new();
     for i in 0..array.len() {
         bt.insert_key(array[i]);
@@ -90,7 +86,7 @@ fn test_heap() {
     }
 }
 
-fn shortest_path(path : String){
+fn shortest_path(path : String) {
     let graph = from_file(path).expect("Error converting file to graph");
 
     let mut now = Instant::now();
@@ -102,14 +98,17 @@ fn shortest_path(path : String){
 
     now = Instant::now();
     println!("Dijkstra started...");
-    let spt_dij = graph.dijkstra(0);
-    println!("Dijkstra elapsed time => {}{} ms{}", color::Fg(color::Green), now.elapsed().as_millis(), color::Fg(color::Reset));
-    spt_dij.print(0, graph.n_nodes() - 1);
+    if let Ok(spt_dij) = graph.dijkstra(0) {
+        println!("Dijkstra elapsed time => {}{} ms{}", color::Fg(color::Green), now.elapsed().as_millis(), color::Fg(color::Reset));
+        spt_dij.print(0, graph.n_nodes() - 1);
+    } else {
+        println!("{}Dijkstra failed! It looks there are some negative edges.{}", color::Fg(color::Red) ,color::Fg(color::Reset));
+    }
 
     now = Instant::now();
     println!("Bellman-Ford started");
     if let Some(spt_bf) = graph.bellman_ford(0) {
-        println!("Bellman-Ford elapsed time => {} ms", now.elapsed().as_millis());
+        println!("Bellman-Ford elapsed time => {}{} ms{}", color::Fg(color::Green), now.elapsed().as_millis(), color::Fg(color::Reset));
         spt_bf.print(0, graph.n_nodes() - 1);
     } else {
         println!("{}Bellman-Ford failed! It looks there are some negative cycles.{}", color::Fg(color::Red) ,color::Fg(color::Reset));
@@ -122,8 +121,9 @@ fn shortest_path(path : String){
     fw_matrix.print(0, graph.n_nodes() - 1);
 }
 
+#[allow(dead_code)]
 fn robot_travel(path : String, cell : (usize, usize)){
-    let mut now = Instant::now();
+    let now = Instant::now();
     println!("Started to convert the file...");
     let graph = robot_graph_from_file(path, cell)
         .expect("Error converting file to robot grid");
@@ -133,13 +133,6 @@ fn robot_travel(path : String, cell : (usize, usize)){
 }
 
 fn main() {
-    //shortest_path(String::from("/home/davide/Documenti/rust/algorithm/algorithms/src/graph100.in"))
-    robot_travel(String::from("/home/davide/Documenti/rust/algorithm/algorithms/src/test4.in"),(1,1))
-}
-
-fn get_between<T, F>(first: &T, second: &T, mut func: F) -> T
-    where F: FnMut(&T, &T) -> T
-{
-    func(first, second);
-    func(first, second)
+    shortest_path(String::from("/home/davide/Documenti/rust/algorithm/algorithms/src/graph1000.in"))
+    //robot_travel(String::from("/home/davide/Documenti/rust/algorithm/algorithms/src/test3.in"),(3,3))
 }

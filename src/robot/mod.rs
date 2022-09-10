@@ -1,11 +1,11 @@
 use std::fs;
 use std::io::{BufRead, BufReader, Error};
-use std::time::Instant;
 use crate::Edge;
 
-use crate::graphs::{NormalEdge, Graph};
+use crate::graphs::{Graph};
 use crate::graphs::GraphType::GraphUndirected;
 
+#[allow(dead_code)]
 pub struct RobotEdge{
     src: usize,
     dst: usize,
@@ -31,6 +31,7 @@ impl Edge for RobotEdge{
     }
 }
 
+#[allow(dead_code)]
 impl RobotEdge {
     pub fn direction(&self) -> char{
         self.direction
@@ -41,6 +42,7 @@ impl RobotEdge {
     }
 }
 
+#[allow(dead_code)]
 pub fn robot_print_bfs(
     src: usize,
     dst: usize,
@@ -56,6 +58,7 @@ pub fn robot_print_bfs(
     }
 }
 
+#[allow(dead_code)]
 pub fn robot_print_dijkstra(
     src: usize,
     dst: usize,
@@ -93,6 +96,7 @@ fn robot_print_path(
     }
 }
 
+#[allow(dead_code)]
 pub fn robot_graph_from_file(path: String, cell_size: (usize, usize)) -> Result<Graph<RobotEdge>, Error> {
     let (grid, rows, cols) = read_grid_from_file(path)?;
     let mut graph: Graph<RobotEdge> = Graph::new(

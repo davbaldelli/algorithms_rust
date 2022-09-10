@@ -20,6 +20,7 @@ fn r_child(i: usize) -> usize {
     l_child(i) + 1
 }
 
+#[allow(dead_code)]
 impl MinHeap {
     pub fn new() -> MinHeap {
         return MinHeap {

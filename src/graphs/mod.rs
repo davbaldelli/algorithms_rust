@@ -1,15 +1,20 @@
-use std::borrow::Borrow;
-use std::cmp::Ordering::{Equal, Greater, Less};
-use std::fmt::{Debug, Display};
-use std::fs;
+use std::{fmt, fs};
 use std::io::{BufRead, BufReader, Error};
-use std::str::FromStr;
-use crate::graphs::Cardinal::{EST, NORTH, SOUTH, WEST};
 use crate::graphs::Color::{BLACK, GREY, WHITE};
 use crate::graphs::GraphType::{GraphDirected, GraphUndirected};
 use crate::MinHeap;
 use queues::{IsQueue, Queue};
 use sscanf::scanf;
+
+#[derive(Debug, Clone)]
+pub struct NegativeEdgeError;
+
+impl fmt::Display for NegativeEdgeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "this procedure can't handle negative edges")
+    }
+}
+
 
 pub trait Edge {
     fn new(src: usize, dst: usize, weight: f32) -> Self;
@@ -43,12 +48,6 @@ pub struct Graph<T> where T : Edge{
     out_deg: Vec<usize>,
 }
 
-pub enum Cardinal {
-    NORTH,
-    SOUTH,
-    WEST,
-    EST,
-}
 
 #[derive(PartialEq, Eq)]
 pub enum GraphType {
@@ -84,7 +83,7 @@ impl<T> Printable for BFSTree<'_, T>  where T : Edge {
 }
 
 impl<T> Printable for DFSTree<'_, T>  where T: Edge {
-    fn print(&self, src: usize, dst: usize) -> () {
+    fn print(&self, _: usize, _: usize) -> () {
         let (prevs, discover, finish) = self;
         println!(" elem | prev | discover | finish |");
         println!("------+------+----------+--------+");
@@ -108,17 +107,6 @@ impl<T> Printable for AllShortestPathTree<'_, T>  where T : Edge {
         print!("{} to {} | weight : {} | path : ", src, dst , dists[src][dst]);
         print_all_pairs_sp(prevs.clone(), src, dst);
         println!();
-    }
-}
-
-impl Cardinal {
-    pub fn value(&self) -> char {
-        match *self {
-            NORTH => 'N',
-            SOUTH => 'S',
-            WEST => 'W',
-            EST => 'E',
-        }
     }
 }
 
@@ -200,6 +188,7 @@ impl<T> Graph<T>  where T : Edge{
         self.n_edges += 1;
     }
 
+    #[allow(dead_code)]
     pub fn print(&self){
         println!("{}", if self.g_type == GraphDirected {String::from("DIRECTED")} else {String::from("UNDIRECTED")});
         for i in 0..self.edges.len() {
@@ -263,6 +252,7 @@ impl<T> Graph<T>  where T : Edge{
     ///
     /// # Arguments
     /// * `graph` - graph where to execute the algorithm
+    #[allow(dead_code)]
     pub fn dfs(&self) -> DFSTree<T>{
         let mut discover: Vec<usize> = vec![0;self.n_nodes];
         let mut finish: Vec<usize> = vec![0;self.n_nodes];
@@ -304,7 +294,7 @@ impl<T> Graph<T>  where T : Edge{
     /// # Arguments
     /// * `graph` - graph where to execute the algorithm
     /// * `source` - source node of the shortest path tree
-    pub fn dijkstra(&self, source: usize) -> ShortestPathTree<T> {
+    pub fn dijkstra(&self, source: usize) -> Result<ShortestPathTree<T>, NegativeEdgeError> {
         let mut distances: Vec<f32> = vec![f32::MAX - (1000.0 * 1000.0); self.n_nodes];
         let mut heap = MinHeap::new();
         let mut added = vec![false; self.n_nodes];
@@ -323,7 +313,7 @@ impl<T> Graph<T>  where T : Edge{
                 let weight = edge.weight();
                 let dst = edge.destination();
                 if weight < 0.0 {
-                    panic!("Dijkstra algorithms do not handles negative weights!")
+                    return Err(NegativeEdgeError)
                 }
                 if !added[dst] && (distances[u] + weight < distances[dst]) {
                     distances[dst] = distances[u] + weight;
@@ -333,7 +323,7 @@ impl<T> Graph<T>  where T : Edge{
             }
         }
 
-        return (prev_edge, distances);
+        return Ok((prev_edge, distances));
     }
 
     ///Missing Doc.
@@ -343,11 +333,13 @@ impl<T> Graph<T>  where T : Edge{
 
         distances[source] = 0.0;
 
-        for i in 0..self.n_nodes-1 {
-            for edge in self.edges[i].as_slice() {
-                if distances[edge.destination()] > (distances[edge.source()] + edge.weight()) {
-                    distances[edge.destination()] = distances[edge.source()] + edge.weight();
-                    prev_edge[edge.destination()] = Some(edge);
+        for _ in 0..self.n_nodes-1 {
+            for i in 0..self.n_nodes {
+                for edge in self.edges[i].as_slice() {
+                    if distances[edge.destination()] > distances[edge.source()] + edge.weight() {
+                        distances[edge.destination()] = distances[edge.source()] + edge.weight();
+                        prev_edge[edge.destination()] = Some(edge);
+                    }
                 }
             }
         }
@@ -401,10 +393,12 @@ impl<T> Graph<T>  where T : Edge{
     }
 
     ///Missing Doc
+    ///
+    #[allow(dead_code)]
     pub fn approx_vertex_cover(&self) -> Vec<&T> {
         let mut cover : Vec<&T> = Vec::new();
         let mut covered : Vec<bool> = vec![false; self.n_nodes];
-        let mut edges = &self.edges;
+        let edges = &self.edges;
         for i in 0..self.n_nodes{
             if !covered[i] {
                 for edge in &edges[i] {
@@ -458,7 +452,8 @@ pub fn print_all_pairs_sp<T>(prevs: Vec<Vec<Option<&T>>>, src : usize, dst: usiz
 }
 
 pub fn from_file(path : String) -> Result<Graph<NormalEdge>, Error>{
-    let buff_reader = BufReader::new(fs::File::open(path)?);
+    let file = fs::File::open(path)?;
+    let buff_reader = BufReader::new(file);
     let mut first = true;
     let mut n_edges : usize = 0;
     let mut graph = Graph::new(0, GraphDirected);

@@ -11,12 +11,14 @@ pub struct BinaryTree {
     head : Option<usize>
 }
 
+#[allow(dead_code)]
 impl Node {
     pub fn new(key : i32, pos : usize) -> Self {
         Node{parent : None, left : None, right : None, key, position: pos}
     }
 }
 
+#[allow(dead_code)]
 impl BinaryTree {
 
     pub fn new() -> Self {

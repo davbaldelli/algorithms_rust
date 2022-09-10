@@ -1,5 +1,6 @@
 use rand::Rng;
 
+#[allow(dead_code)]
 pub fn insertion_sort(array: &mut [i32]) {
     for i in 1..array.len() {
         let key = array[i];
@@ -14,6 +15,7 @@ pub fn insertion_sort(array: &mut [i32]) {
     }
 }
 
+#[allow(dead_code)]
 pub fn quicksort(vec: &mut Vec<i32>, head : usize, tail : usize){
     if head < tail{
         let split = rand_partition(vec, head, tail);
@@ -23,6 +25,7 @@ pub fn quicksort(vec: &mut Vec<i32>, head : usize, tail : usize){
         quicksort(vec, split + 1, tail);
     }
 }
+
 
 pub fn partition(vec: &mut Vec<i32>, head : usize, tail : usize ) -> usize {
     let last = vec[tail];
@@ -44,7 +47,7 @@ pub fn rand_partition(vec: &mut Vec<i32>, head : usize, tail : usize) -> usize{
     partition(vec, head, tail)
 }
 
-
+#[allow(dead_code)]
 pub fn rand_select(vec : &mut Vec<i32>, head : usize, tail : usize, i : usize) -> i32{
     if head == tail {
         vec[head]
