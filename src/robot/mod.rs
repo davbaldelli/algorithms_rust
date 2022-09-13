@@ -6,6 +6,7 @@ use crate::graphs::{Graph};
 use crate::graphs::GraphType::GraphUndirected;
 
 #[allow(dead_code)]
+#[derive(Clone)]
 pub struct RobotEdge{
     src: usize,
     dst: usize,
@@ -22,8 +23,16 @@ impl Edge for RobotEdge{
         self.src
     }
 
+    fn set_source(&mut self, source: usize) {
+        self.src = source
+    }
+
     fn destination(&self) -> usize {
         self.dst
+    }
+
+    fn set_destination(&mut self, destination: usize) {
+        self.dst = destination
     }
 
     fn weight(&self) -> f32 {
@@ -116,7 +125,7 @@ pub fn robot_graph_from_file(path: String, cell_size: (usize, usize)) -> Result<
                 if !is_last_col(j, cols, cell_size) {
                     let (src, dst) = get_src_dst(i, j, cols, cell_size, false);
                     if !has_obstacles_on_right(&grid, i, j, '*', cell_size) {
-                        graph.add_edge(src, dst, 1.0);
+                        graph.create_edge(src, dst, 1.0);
                         let src_len = graph.edges[src].len();
                         graph.edges[src][src_len-1].set_direction('E');
                         let dst_len = graph.edges[dst].len();
@@ -129,7 +138,7 @@ pub fn robot_graph_from_file(path: String, cell_size: (usize, usize)) -> Result<
                 if !is_last_row(i, rows, cell_size) {
                     let (src, dst) = get_src_dst(i, j, cols, cell_size, true);
                     if !has_obstacles_below(&grid, i, j, '*', cell_size) {
-                        graph.add_edge(src, dst, 1.0);
+                        graph.create_edge(src, dst, 1.0);
                         let src_len = graph.edges[src].len();
                         graph.edges[src][src_len-1].set_direction('S');
                         let dst_len = graph.edges[dst].len();

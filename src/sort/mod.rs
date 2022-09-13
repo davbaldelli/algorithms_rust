@@ -47,6 +47,10 @@ pub fn rand_partition(vec: &mut Vec<i32>, head : usize, tail : usize) -> usize{
     partition(vec, head, tail)
 }
 
+pub fn heap_sort(vec: &mut Vec<i32>){
+    todo!()
+}
+
 #[allow(dead_code)]
 pub fn rand_select(vec : &mut Vec<i32>, head : usize, tail : usize, i : usize) -> i32{
     if head == tail {

@@ -3,6 +3,7 @@ use std::time::{Instant};
 use rand::Rng;
 use termion::{color, style};
 use crate::binary_trees::BinaryTree;
+use crate::dynamic_programming::{bottom_up_cut_rod, print_cut_rod};
 use crate::graphs::{Edge, from_file, Printable};
 use crate::heap::MinHeap;
 use crate::robot::{robot_graph_from_file, robot_print_bfs};
@@ -12,12 +13,22 @@ mod heap;
 mod sort;
 mod binary_trees;
 mod robot;
+mod dynamic_programming;
 
 #[test]
 fn test_insertion_sort() {
     let mut array = vec![2, 3, -1, 7, 6, 9, 5];
     sort::insertion_sort(&mut array);
     assert_eq!(array, vec![-1, 2, 3, 5, 6, 7, 9])
+}
+
+#[test]
+fn test_cut_rod() {
+    let prices = vec![0,1,5,8,9,10,17,17,20,24,30];
+    let (res, f_cut) = bottom_up_cut_rod(&prices, 10);
+    assert_eq!(vec![0,1,5,8,10,13,17,18,22,25,30], res);
+    assert_eq!(vec![0,1,2,3,2,2,6,1,2,3,10], f_cut);
+    print_cut_rod(&prices, 9);
 }
 
 #[test]
@@ -134,5 +145,5 @@ fn robot_travel(path : String, cell : (usize, usize)){
 
 fn main() {
     shortest_path(String::from("/home/davide/Documenti/rust/algorithm/algorithms/src/graph1000.in"))
-    //robot_travel(String::from("/home/davide/Documenti/rust/algorithm/algorithms/src/test3.in"),(3,3))
+    //robot_travel(String::from("/home/davide/Documenti/rust/algorithm/algorithms/src/test4.in"),(1,1))
 }

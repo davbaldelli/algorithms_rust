@@ -16,16 +16,21 @@ impl fmt::Display for NegativeEdgeError {
 }
 
 
-pub trait Edge {
+pub trait Edge : Clone {
     fn new(src: usize, dst: usize, weight: f32) -> Self;
 
     fn source(&self) -> usize;
 
+    fn set_source(&mut self, source: usize);
+
     fn destination(&self) ->usize;
+
+    fn set_destination(&mut self, destination : usize);
 
     fn weight(&self) -> f32;
 }
 
+#[derive(Clone)]
 pub struct NormalEdge{
     src: usize,
     dst: usize,
@@ -58,11 +63,18 @@ pub enum GraphType {
 pub trait Printable {
     fn print(&self, src : usize, dst : usize) -> ();
 }
-
+/// Represents the Shortest Path Tree: the first value is the list of the predecessors,
+/// the second is the distances list
 type ShortestPathTree<'a, T> = (Vec<Option<&'a T>>, Vec<f32>);
+/// Represents the Breath First Tree: the first value is the list of the predecessors,
+/// the second is the distances list
 type BFSTree<'a, T> = (Vec<Option<&'a T>>, Vec<i32>);
+/// Represents the Breath First Tree: the first value is the list of the predecessors,
+/// the second is the discover time list, the third is the finish time list
 type DFSTree<'a, T> = (Vec<Option<&'a T>>, Vec<usize>, Vec<usize>);
-type AllShortestPathTree<'a, T>  = (Vec<Vec<Option<&'a T>>>, Vec<Vec<f32>>);
+/// Represent the matrix of the shortest path between all the pairs. The first value is the matrix of the predecessors,
+/// the second is the distances matrix
+type AllShortestPathMatrix<'a, T>  = (Vec<Vec<Option<&'a T>>>, Vec<Vec<f32>>);
 
 impl<T> Printable for ShortestPathTree<'_, T> where T : Edge {
     fn print(&self, src : usize, dst : usize) -> () {
@@ -101,7 +113,7 @@ impl<T> Printable for DFSTree<'_, T>  where T: Edge {
     }
 }
 
-impl<T> Printable for AllShortestPathTree<'_, T>  where T : Edge {
+impl<T> Printable for AllShortestPathMatrix<'_, T>  where T : Edge {
     fn print(&self, src: usize, dst: usize) -> () {
         let (prevs, dists) = self;
         print!("{} to {} | weight : {} | path : ", src, dst , dists[src][dst]);
@@ -109,6 +121,7 @@ impl<T> Printable for AllShortestPathTree<'_, T>  where T : Edge {
         println!();
     }
 }
+
 
 impl Edge for NormalEdge{
     fn new(src: usize, dst: usize, weight: f32) -> Self {
@@ -123,8 +136,16 @@ impl Edge for NormalEdge{
         self.src
     }
 
+    fn set_source(&mut self, source: usize) {
+        self.src = source
+    }
+
     fn destination(&self) ->usize{
         self.dst
+    }
+
+    fn set_destination(&mut self, destination: usize) {
+        self.dst = destination
     }
 
     fn weight(&self) -> f32 {
@@ -165,10 +186,10 @@ impl<T> Graph<T>  where T : Edge{
         self.n_nodes
     }
 
-    fn insert_edge(&mut self, src: usize, dst: usize, weight: f32) {
-        self.edges[src].push(T::new(src, dst, weight));
-        self.in_deg[dst] += 1;
-        self.out_deg[src] += 1;
+    fn insert_edge(&mut self, edge : T) {
+        self.in_deg[edge.destination()] += 1;
+        self.out_deg[edge.source()] += 1;
+        self.edges[edge.source()].push(edge);
     }
 
     /// Add new edge.
@@ -178,12 +199,21 @@ impl<T> Graph<T>  where T : Edge{
     /// * `src` - source of the edge
     /// * `dst` - destination of the edge
     /// * `weight` - weight of the edge
-    /// * `vertical` - (when the graph is a grid) if is a vertical edge or not
-    ///
-    pub fn add_edge(&mut self, src: usize, dst: usize, weight: f32){
-        self.insert_edge(src, dst, weight);
+    pub fn create_edge(&mut self, src: usize, dst: usize, weight: f32){
+        self.insert_edge(T::new(src, dst, weight));
         if self.g_type == GraphUndirected {
-            self.insert_edge(dst, src, weight);
+            self.insert_edge(T::new(dst, src, weight));
+        }
+        self.n_edges += 1;
+    }
+
+    pub fn add_edge(&mut self, edge : T) {
+        self.insert_edge(edge.clone());
+        if self.g_type == GraphUndirected {
+            let mut edge_rev = edge.clone();
+            edge_rev.set_source(edge.destination());
+            edge_rev.set_destination(edge.source());
+            self.insert_edge(edge_rev);
         }
         self.n_edges += 1;
     }
@@ -326,7 +356,12 @@ impl<T> Graph<T>  where T : Edge{
         return Ok((prev_edge, distances));
     }
 
-    ///Missing Doc.
+    /// Returns the shortest path tree with the Bellman-Ford Algorithm (O(|E||V|) with |V| = number of nodes, |E| = number of edges) of the given graph
+    /// from the give source.
+    ///
+    /// # Arguments
+    /// * `graph` - graph where to execute the algorithm
+    /// * `source` - source node of the shortest path tree
     pub fn bellman_ford(&self, source: usize) -> Option<ShortestPathTree<T>> {
         let mut distances: Vec<f32> = vec![f32::MAX - (1000.0 * 1000.0); self.n_nodes];
         let mut prev_edge: Vec<Option<&T>> = vec![None; self.n_nodes];
@@ -355,22 +390,14 @@ impl<T> Graph<T>  where T : Edge{
         return Some((prev_edge, distances));
     }
 
-    ///Missing Doc.
-    pub fn floyd_warshall(&self) -> AllShortestPathTree<T> {
+    /// Returns the shortest path for each for each pair with the Floyd-Warshall algorithm (O(|V^3| with |V| number of nodes.
+    pub fn floyd_warshall(&self) -> AllShortestPathMatrix<T> {
         let n = self.n_nodes();
-        let mut dists : Vec<Vec<f32>> = Vec::new();
-        let mut prevs: Vec<Vec<Option<&T>>> = Vec::new();
+        let mut dists : Vec<Vec<f32>> = vec![vec![f32::MAX - (1000.0 * 1000.0);n]; n];
+        let mut prevs: Vec<Vec<Option<&T>>> = vec![vec![None; n];n];
 
         for i in 0..n {
-            prevs.push(Vec::new());
-            dists.push(Vec::new());
-            for j in 0..n {
-                prevs[i].push(None);
-                dists[i].push(if i == j { 0.0 } else {f32::MAX - (1000.0 * 1000.0) });
-            }
-        }
-
-        for i in 0..n {
+            dists[i][i] = 0.0;
             for edge in self.edges[i].as_slice() {
                 prevs[edge.source()][edge.destination()] = Some(edge);
                 dists[edge.source()][edge.destination()] = edge.weight();
@@ -484,7 +511,7 @@ pub fn from_file(path : String) -> Result<Graph<NormalEdge>, Error>{
                     ));
                 }
             };
-            graph.add_edge(src, dst, weight);
+            graph.create_edge(src, dst, weight);
         }
     }
 
