@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::{Rng, thread_rng};
 
 #[allow(dead_code)]
 pub fn insertion_sort(array: &mut [i32]) {
@@ -41,7 +41,7 @@ pub fn partition(vec: &mut Vec<i32>, head : usize, tail : usize ) -> usize {
 }
 
 pub fn rand_partition(vec: &mut Vec<i32>, head : usize, tail : usize) -> usize{
-    let mut rng = rand::thread_rng();
+    let mut rng = thread_rng();
     let i : usize = rng.gen_range(head..tail+1);
     vec.swap(i, tail);
     partition(vec, head, tail)

@@ -1,4 +1,3 @@
-extern crate termion;
 use std::time::{Instant};
 use rand::Rng;
 use termion::{color, style};

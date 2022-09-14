@@ -4,7 +4,7 @@ use crate::graphs::Color::{BLACK, GREY, WHITE};
 use crate::graphs::GraphType::{GraphDirected, GraphUndirected};
 use crate::MinHeap;
 use queues::{IsQueue, Queue};
-use sscanf::scanf;
+use sscanf::{scanf};
 
 #[derive(Debug, Clone)]
 pub struct NegativeEdgeError;

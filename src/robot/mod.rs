@@ -1,5 +1,6 @@
 use std::fs;
 use std::io::{BufRead, BufReader, Error};
+use sscanf::{scanf};
 use crate::Edge;
 
 use crate::graphs::{Graph};
@@ -182,7 +183,7 @@ fn read_grid_from_file(path: String) -> Result<(Vec<Vec<char>>, usize, usize), E
 
 fn read_first_line(line: Result<String, Error>) -> Result<(usize, usize), Error> {
     let parsed: (usize, usize) = match line {
-        Ok(line) => sscanf::scanf!(line, "{} {}", usize, usize).expect("First line wrongly formatted"),
+        Ok(line) => scanf!(line, "{} {}", usize, usize).expect("First line wrongly formatted"),
         //This error occurs when there is any first line
         Err(_) => {
             return Err(Error::new(
